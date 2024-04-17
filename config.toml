@@ -1,5 +1,5 @@
 [database]
-dsn = "postgres://postgres:postgres123@localhost:5432/books?sslmode=disable"
+dsn = "postgresql://postgres:ygRlWSOYzVLIpXmsUCtKLKBbDExLREba@postgres.railway.internal:5432/railway?sslmode=disable"
 
 # auth.config
 [auth]
