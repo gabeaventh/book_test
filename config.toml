@@ -1,0 +1,6 @@
+[database]
+dsn = "postgres://postgres:postgres123@localhost:5432/books?sslmode=disable"
+
+# auth.config
+[auth]
+jwt_secret = "your_strong_secret_key123" 
