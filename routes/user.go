@@ -4,7 +4,6 @@ import (
 	"book_test/models"
 	"book_test/services"
 	"book_test/utils"
-	"net/http"
 
 	"github.com/labstack/echo/v4"
 )
@@ -23,27 +22,35 @@ func (r *UserRoutes) SignUp(c echo.Context) error {
 	user := &models.UserAuth{}
 
 	if err := c.Bind(user); err != nil {
-		return utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return err
 	}
+
 	newUser, err := r.userService.SignUp(user.Email, user.Password, c)
 	if err != nil {
-		return utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return err
 	}
 	return utils.SuccessResponse(c, "User created successfully", newUser)
 }
 
 func (r *UserRoutes) SignIn(c echo.Context) error {
-	email := c.FormValue("email")
-	password := c.FormValue("password")
+	auth := &models.UserAuth{}
 
-	user, err := r.userService.SignIn(email, password, c)
+	if err := c.Bind(auth); err != nil {
+		return err
+	}
+
+	user, err := r.userService.SignIn(auth.Email, auth.Password, c)
 	if err != nil {
-		return utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return err
 	}
 	return utils.SuccessResponse(c, "User signed in successfully", user)
 }
 
 func (r *UserRoutes) SignOut(c echo.Context) error {
+	err := r.userService.SignOut(c)
+	if err != nil {
+		return err
+	}
 	return utils.SuccessResponse(c, "User signed out successfully", nil)
 }
 

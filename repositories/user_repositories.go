@@ -2,8 +2,6 @@ package repositories
 
 import (
 	"context"
-	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/nedpals/supabase-go"
@@ -13,6 +11,7 @@ type UserRepository interface {
 	SignUp(email, password string, c echo.Context) (*supabase.AuthenticatedDetails, error)
 	SignIn(email, password string, c echo.Context) (*supabase.AuthenticatedDetails, error)
 	SignOut(c echo.Context) error
+	GetUser(token string, c echo.Context) (*supabase.User, error)
 }
 
 type UserRepositoryImpl struct {
@@ -34,12 +33,6 @@ func (u *UserRepositoryImpl) SignIn(email, password string, c echo.Context) (*su
 	if err != nil {
 		return nil, err
 	}
-	expires := time.Unix(int64(user.ExpiresIn), 0)
-	c.SetCookie(&http.Cookie{
-		Name:    "token",
-		Value:   user.AccessToken,
-		Expires: expires,
-	})
 	return user, nil
 }
 
@@ -64,9 +57,10 @@ func (u *UserRepositoryImpl) SignUp(email, password string, c echo.Context) (*su
 // SignOut implements UserRepository.
 func (u *UserRepositoryImpl) SignOut(c echo.Context) error {
 	userToken := c.Request().Header.Get("Authorization")
-	c.SetCookie(&http.Cookie{
-		Name:    "token",
-		Expires: time.Now(),
-	})
 	return u.db.Auth.SignOut(c.Request().Context(), userToken)
+}
+
+// GetUser implements UserRepository.
+func (u *UserRepositoryImpl) GetUser(token string, c echo.Context) (*supabase.User, error) {
+	return u.db.Auth.User(c.Request().Context(), token)
 }

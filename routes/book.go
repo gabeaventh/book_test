@@ -5,7 +5,6 @@ import (
 	"book_test/services"
 	"book_test/utils"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -14,11 +13,13 @@ import (
 
 type BookRoutes struct {
 	bookService services.BookService
+	userService services.UserService
 }
 
-func NewBookRoutes(bookService services.BookService) *BookRoutes {
+func NewBookRoutes(bookService services.BookService, userService services.UserService) *BookRoutes {
 	return &BookRoutes{
 		bookService: bookService,
+		userService: userService,
 	}
 }
 
@@ -34,7 +35,7 @@ func (r *BookRoutes) CreateBook(c echo.Context) error {
 	auth := r.GetUser(c)
 
 	if auth == nil {
-		return handleError(c, http.StatusUnauthorized, "Unauthorized")
+		return auth
 	}
 
 	book := &models.Book{}
@@ -48,16 +49,15 @@ func (r *BookRoutes) CreateBook(c echo.Context) error {
 
 	book, err := r.bookService.CreateBook(c, book)
 	if err != nil {
-		return handleError(c, http.StatusInternalServerError, err.Error())
+		return err
 	}
 	return utils.SuccessResponse(c, "Book created successfully", book)
 }
 
 func (r *BookRoutes) UpdateBook(c echo.Context) error {
 	auth := r.GetUser(c)
-	log.Println(auth)
 	if auth == nil {
-		return handleError(c, http.StatusUnauthorized, auth.Error())
+		return auth
 	}
 
 	id := c.Param("id")
@@ -78,7 +78,7 @@ func (r *BookRoutes) UpdateBook(c echo.Context) error {
 	book.ID = idInt
 	book, err = r.bookService.UpdateBook(c, book)
 	if err != nil {
-		return handleError(c, http.StatusInternalServerError, err.Error())
+		return err
 	}
 	return utils.SuccessResponse(c, "Book updated successfully", book)
 }
@@ -87,7 +87,7 @@ func (r *BookRoutes) DeleteBook(c echo.Context) error {
 	auth := r.GetUser(c)
 
 	if auth == nil {
-		return handleError(c, http.StatusUnauthorized, "Unauthorized")
+		return auth
 	}
 
 	id := c.Param("id")
@@ -98,7 +98,7 @@ func (r *BookRoutes) DeleteBook(c echo.Context) error {
 
 	err = r.bookService.DeleteBook(c, idInt)
 	if err != nil {
-		return handleError(c, http.StatusInternalServerError, err.Error())
+		return err
 	}
 	return utils.SuccessResponse(c, "Book deleted successfully", nil)
 }
@@ -115,25 +115,22 @@ func (r *BookRoutes) GetBookByID(c echo.Context) error {
 	}
 	book, err := r.bookService.GetBookByID(c, idInt)
 	if err != nil {
-		return handleError(c, http.StatusInternalServerError, err.Error())
+		return err
 	}
 	return utils.SuccessResponse(c, "Book fetched successfully", book)
 }
 
 func (r *BookRoutes) GetUser(c echo.Context) error {
-	user := c.Request().Header.Get("Authorization")
+	token := c.Request().Header.Get("Authorization")
 
-	if user == "" {
+	if token == "" {
 		return handleError(c, http.StatusUnauthorized, "Unauthorized")
 	}
 
-	cookie, err := c.Cookie("token")
+	user, err := r.userService.GetUser(token, c)
+
 	if err != nil {
-		return handleError(c, http.StatusUnauthorized, "Unauthorized")
-	}
-
-	if cookie.Value != user {
-		return handleError(c, http.StatusUnauthorized, "Unauthorized")
+		return err
 	}
 
 	return utils.SuccessResponse(c, "Authorized", user)

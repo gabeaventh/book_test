@@ -3,7 +3,6 @@ package repositories
 import (
 	"book_test/models"
 	"errors"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -116,15 +115,10 @@ func (b *BookRepositoryImpl) GetAllBooks(c echo.Context) ([]*models.Book, error)
 	var newBook []*models.Book
 
 	for _, book := range res {
-		createdAt, err := time.Parse(layout, book["created_at"].(string))
-		if err != nil {
-			log.Println(err)
-		}
-		log.Println(createdAt)
+		createdAt, _ := time.Parse(layout, book["created_at"].(string))
 		updatedAt, _ := time.Parse(layout, book["updated_at"].(string))
 		deletedAt, _ := time.Parse(layout, book["deleted_at"].(string))
-		log.Println(book["id"])
-		log.Println(book["created_at"])
+
 		newBook = append(newBook, &models.Book{
 			ID:            int(book["id"].(float64)),
 			Title:         book["title"].(string),

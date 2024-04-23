@@ -20,14 +20,12 @@ func main() {
 
 	db := db.InitDB()
 
-	bookRepository := repositories.NewBookRepository(db)
-	bookService := services.NewBookService(bookRepository)
-	bookRoutes := routes.NewBookRoutes(bookService)
-
 	userRepository := repositories.NewUserRepository(db)
 	userService := services.NewUserService(userRepository)
 	userRoutes := routes.NewUserRoutes(userService)
-
+	bookRepository := repositories.NewBookRepository(db)
+	bookService := services.NewBookService(bookRepository)
+	bookRoutes := routes.NewBookRoutes(bookService, userService)
 	bookRoutes.GetRoutes(e)
 	userRoutes.GetRoutes(e)
 
@@ -38,5 +36,5 @@ func envPortOr(port string) string {
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		return envPort
 	}
-	return ":" + port
+	return port
 }
