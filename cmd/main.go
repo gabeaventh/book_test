@@ -22,7 +22,12 @@ func main() {
 	bookService := services.NewBookService(bookRepository)
 	bookRoutes := routes.NewBookRoutes(bookService)
 
+	userRepository := repositories.NewUserRepository(db)
+	userService := services.NewUserService(userRepository)
+	userRoutes := routes.NewUserRoutes(userService)
+
 	bookRoutes.GetRoutes(e)
+	userRoutes.GetRoutes(e)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }

@@ -1,25 +1,16 @@
 package db
 
 import (
-	"database/sql"
-	"log"
-
-	_ "github.com/lib/pq" // import the PostgreSQL driver
-	"github.com/spf13/viper"
+	"github.com/nedpals/supabase-go"
 )
 
-func InitDB() *sql.DB {
-	viper.SetConfigFile("config.toml")
-	viper.ReadInConfig()
-	dsn := viper.GetString("database.dsn")
+const (
+	supabaseURL = "https://olfhzqabncwfpyjqnxix.supabase.co"
+	supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sZmh6cWFibmN3ZnB5anFueGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTMzOTc3OTksImV4cCI6MjAyODk3Mzc5OX0.LfsNF4e_SPdIDYk8xjbaLx5lFhlpVQ3Rfd75ICH6lqQ"
+)
 
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		log.Fatalf("Error opening database: %v", err)
-	}
-	if err = db.Ping(); err != nil {
-		log.Fatalf("Error opening database: %v", err)
-	}
+func InitDB() *supabase.Client {
+	client := supabase.CreateClient(supabaseURL, supabaseKey)
 
-	return db
+	return client
 }

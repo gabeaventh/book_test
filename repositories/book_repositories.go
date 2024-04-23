@@ -2,12 +2,19 @@ package repositories
 
 import (
 	"book_test/models"
-	"database/sql"
 	"errors"
+	"log"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/nedpals/supabase-go"
+)
+
+const (
+	defaultTime = "0001-01-01T00:00:00Z"
+	layout      = "2006-01-02T15:04:05.999999+00:00"
 )
 
 type BookRepository interface {
@@ -19,32 +26,53 @@ type BookRepository interface {
 }
 
 type BookRepositoryImpl struct {
-	db *sql.DB
+	db *supabase.Client
 }
 
-func NewBookRepository(db *sql.DB) BookRepository {
+func NewBookRepository(db *supabase.Client) BookRepository {
 	return &BookRepositoryImpl{db: db}
 }
 
 // CreateBook implements BookRepository.
 func (b *BookRepositoryImpl) CreateBook(c echo.Context, book *models.Book) (*models.Book, error) {
-	ctx := c.Request().Context()
 	book.Title = strings.TrimSpace(book.Title)
 	book.Author = strings.TrimSpace(book.Author)
 	book.PublishedDate = strings.TrimSpace(book.PublishedDate)
 
-	stmt, err := b.db.PrepareContext(ctx, "INSERT INTO books (title, author, published_date) VALUES ($1, $2, $3) RETURNING id, title, author, published_date")
+	// manually get the next ID
+	// supabase somehow doesn't increment the ID
+	var result []map[string]interface{}
+
+	err := b.db.DB.From("books").Select("*").Execute(&result)
+
 	if err != nil {
 		return nil, err
 	}
 
-	var newBook models.Book
-	err = stmt.QueryRowContext(ctx, book.Title, book.Author, book.PublishedDate).Scan(&newBook.ID, &newBook.Title, &newBook.Author, &newBook.PublishedDate)
+	// increment the ID
+	count := len(result)
+	id := 1
+	if count > 0 {
+		id = count + 1
+	}
+	newBook := &models.Book{
+		ID:            id,
+		Title:         book.Title,
+		Author:        book.Author,
+		PublishedDate: book.PublishedDate,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     book.UpdatedAt,
+		DeletedAt:     book.DeletedAt,
+	}
+
+	var results []map[string]interface{}
+	err = b.db.DB.From("books").Insert(newBook).Execute(&results)
+
 	if err != nil {
 		return nil, err
 	}
 
-	return &newBook, nil
+	return newBook, nil
 }
 
 // DeleteBook implements BookRepository.
@@ -52,49 +80,63 @@ func (b *BookRepositoryImpl) DeleteBook(c echo.Context, id int) error {
 	if id == 0 {
 		return errors.New("ID is required")
 	}
-	ctx := c.Request().Context()
-	book := models.Book{ID: id}
-	err := b.db.QueryRowContext(ctx, "SELECT deleted_at FROM books WHERE id = $1", book.ID).Scan(&book.DeletedAt)
+
+	book, err := b.GetBookByID(c, id)
 	if err != nil {
 		return err
-	}
-	if book.DeletedAt != nil {
-		return errors.New("book is not found")
 	}
 
-	stmt, err := b.db.PrepareContext(ctx, "UPDATE books SET deleted_at = $1 WHERE id = $2")
+	newBook := &models.Book{
+		ID:            book.ID,
+		Title:         book.Title,
+		Author:        book.Author,
+		PublishedDate: book.PublishedDate,
+		CreatedAt:     book.CreatedAt,
+		UpdatedAt:     book.UpdatedAt,
+		DeletedAt:     time.Now(),
+	}
+	var res []models.Book
+	err = b.db.DB.From("books").Update(newBook).Eq("id", strconv.Itoa(newBook.ID)).Execute(&res)
+
 	if err != nil {
 		return err
 	}
-	_, err = stmt.ExecContext(ctx, time.Now(), id)
-	return err
+	return nil
 }
 
 // GetAllBooks implements BookRepository.
 func (b *BookRepositoryImpl) GetAllBooks(c echo.Context) ([]*models.Book, error) {
-	ctx := c.Request().Context()
+	var res []map[string]interface{}
+	err := b.db.DB.From("books").Select("*").Execute(&res)
 
-	stmt, err := b.db.PrepareContext(ctx, "SELECT id, title, author, published_date, updated_at, created_at FROM books WHERE deleted_at IS NULL")
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
 
-	rows, err := stmt.QueryContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	var newBook []*models.Book
 
-	var books []*models.Book
-	for rows.Next() {
-		var book models.Book
-		if err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.PublishedDate, &book.UpdatedAt, &book.CreatedAt); err != nil {
-			return nil, err
+	for _, book := range res {
+		createdAt, err := time.Parse(layout, book["created_at"].(string))
+		if err != nil {
+			log.Println(err)
 		}
-		books = append(books, &book)
+		log.Println(createdAt)
+		updatedAt, _ := time.Parse(layout, book["updated_at"].(string))
+		deletedAt, _ := time.Parse(layout, book["deleted_at"].(string))
+		log.Println(book["id"])
+		log.Println(book["created_at"])
+		newBook = append(newBook, &models.Book{
+			ID:            int(book["id"].(float64)),
+			Title:         book["title"].(string),
+			Author:        book["author"].(string),
+			PublishedDate: book["published_date"].(string),
+			CreatedAt:     createdAt,
+			UpdatedAt:     updatedAt,
+			DeletedAt:     deletedAt,
+		})
 	}
-	return books, nil
+
+	return newBook, nil
 }
 
 // GetBookByID implements BookRepository.
@@ -102,20 +144,27 @@ func (b *BookRepositoryImpl) GetBookByID(c echo.Context, id int) (*models.Book, 
 	if id == 0 {
 		return nil, errors.New("ID is required")
 	}
+	var res map[string]interface{}
+	err := b.db.DB.From("books").Select("*").Single().Eq("id", strconv.Itoa(id)).Execute(&res)
 
-	ctx := c.Request().Context()
-	stmt, err := b.db.PrepareContext(ctx, "SELECT id, title, author, published_date, updated_at, created_at FROM books WHERE id = $1 AND deleted_at IS NULL")
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
 
-	var book models.Book
-	err = stmt.QueryRowContext(ctx, id).Scan(&book.ID, &book.Title, &book.Author, &book.PublishedDate, &book.UpdatedAt, &book.CreatedAt)
-	if err != nil {
-		return nil, err
+	createAt, _ := time.Parse(layout, res["created_at"].(string))
+	updatedAt, _ := time.Parse(layout, res["updated_at"].(string))
+	deletedAt, _ := time.Parse(layout, res["deleted_at"].(string))
+	newBook := &models.Book{
+		ID:            int(res["id"].(float64)),
+		Title:         res["title"].(string),
+		Author:        res["author"].(string),
+		PublishedDate: res["published_date"].(string),
+		CreatedAt:     createAt,
+		UpdatedAt:     updatedAt,
+		DeletedAt:     deletedAt,
 	}
-	return &book, nil
+
+	return newBook, nil
 }
 
 // UpdateBook implements BookRepository.
@@ -123,28 +172,26 @@ func (b *BookRepositoryImpl) UpdateBook(c echo.Context, book *models.Book) (*mod
 	if book == nil {
 		return nil, errors.New("book data cannot be empty")
 	}
-
-	ctx := c.Request().Context()
 	book.Title = strings.TrimSpace(book.Title)
 	book.Author = strings.TrimSpace(book.Author)
 	book.PublishedDate = strings.TrimSpace(book.PublishedDate)
-	err := b.db.QueryRowContext(ctx, "SELECT deleted_at FROM books WHERE id = $1", book.ID).Scan(&book.DeletedAt)
-	if err != nil {
-		return nil, err
+
+	newBook := &models.Book{
+		ID:            book.ID,
+		Title:         book.Title,
+		Author:        book.Author,
+		PublishedDate: book.PublishedDate,
+		CreatedAt:     book.CreatedAt,
+		UpdatedAt:     time.Now(),
+		DeletedAt:     book.DeletedAt,
 	}
-	if book.DeletedAt != nil {
-		return nil, errors.New("book is not found")
-	}
-	stmt, err := b.db.PrepareContext(ctx, "UPDATE books SET title = $1, author = $2, published_date = $3, updated_at = $4 WHERE id = $5")
+
+	var res []*models.Book
+	err := b.db.DB.From("books").Update(newBook).Eq("id", strconv.Itoa(newBook.ID)).Execute(&res)
 
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx, book.Title, book.Author, book.PublishedDate, time.Now(), book.ID)
-	if err != nil {
-		return nil, err
-	}
-	return book, nil
+	return newBook, nil
 }

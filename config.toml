@@ -1,5 +1,5 @@
 [database]
-dsn = "postgresql://postgres:ygRlWSOYzVLIpXmsUCtKLKBbDExLREba@postgres.railway.internal:5432/railway?sslmode=disable"
+dsn = "postgres://postgres.olfhzqabncwfpyjqnxix:termakan17112531!@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=disable"
 
 # auth.config
 [auth]
