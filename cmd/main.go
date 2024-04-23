@@ -29,5 +29,6 @@ func main() {
 	bookRoutes.GetRoutes(e)
 	userRoutes.GetRoutes(e)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	// e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(":80"))
 }
