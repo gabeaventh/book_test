@@ -5,12 +5,14 @@ import (
 	"book_test/repositories"
 	"book_test/routes"
 	"book_test/services"
+	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
+
 	e := echo.New()
 
 	e.Use(middleware.Logger())
@@ -29,6 +31,12 @@ func main() {
 	bookRoutes.GetRoutes(e)
 	userRoutes.GetRoutes(e)
 
-	// e.Logger.Fatal(e.Start(":8080"))
-	e.Logger.Fatal(e.Start(":80"))
+	e.Logger.Fatal(e.Start(":" + envPortOr("8080")))
+}
+
+func envPortOr(port string) string {
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		return ":" + envPort
+	}
+	return ":" + port
 }
