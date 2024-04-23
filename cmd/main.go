@@ -36,7 +36,7 @@ func main() {
 
 func envPortOr(port string) string {
 	if envPort := os.Getenv("PORT"); envPort != "" {
-		return ":" + envPort
+		return envPort
 	}
 	return ":" + port
 }

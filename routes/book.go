@@ -145,7 +145,7 @@ func handleError(c echo.Context, statusCode int, message string) error {
 
 func validateBookInput(book *models.Book) error {
 	if book.Title == "" || book.Author == "" {
-		return fmt.Errorf("title and author are required") // Use fmt for basic error creation
+		return fmt.Errorf("title and author are required")
 	}
 	return nil
 }
