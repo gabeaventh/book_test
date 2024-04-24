@@ -93,7 +93,8 @@ User OBJECT RESPONSE
 
 ### Book
 > [!IMPORTANT]
-Please Refer to [User](#user "Goto user") on how to authenticate
+Need Authentication Header
+Please Refer to [This Section](#user "Goto user") on how to authenticate using POSTMAN / ThunderClient, then paste the access-token to Header
 ```sh
 GET /book: Fetch all books OBJECT RESPONSE
 POST /book: Create a new book OBJECT RESPONSE with JSON DATA
