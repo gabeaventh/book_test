@@ -2,6 +2,8 @@
 
 This is a web service for managing books. It's written in Go and uses the Echo framework. Using Supabase as DB and Authentication services
 
+This Service was intended to use PostgreSQL as it DB + Docker to Deploy, since its a bit difficult to Deploy and Configure it to Railway, i use Supabase Service instead
+
 ## Prerequisites
 
 - Go (version 1.16 or higher)
@@ -9,8 +11,8 @@ This is a web service for managing books. It's written in Go and uses the Echo f
 ## Setup
 
 ```sh
-git clone <repository-url>
-cd <project-directory>
+git clone https://github.com/gabeaventh/book_test.git
+cd book_test
 go mod download
 ```
 Start the service:
